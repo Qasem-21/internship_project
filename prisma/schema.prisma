@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Department {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String?
+  employees   Employee[]
+}
+
+model Position {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String?
+  employees   Employee[]
+}
+
+model Employee {
+  id            Int                 @id @default(autoincrement())
+  fullName      String
+  email         String              @unique
+  dateOfBirth   DateTime
+  hireDate      DateTime
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  isDeleted     Boolean             @default(false)
+
+  departmentId  Int
+  positionId    Int
+
+  department    Department          @relation(fields: [departmentId], references: [id])
+  position      Position            @relation(fields: [positionId], references: [id])
+
+  addresses     EmployeeAddress[]
+  salaries      EmployeeSalary[]
+  documents     EmployeeDocument[]
+  attendance    EmployeeAttendance[]
+}
+
+model EmployeeAddress {
+  id         Int     @id @default(autoincrement())
+  employeeId Int
+  street     String
+  city       String
+  country    String
+  isPrimary  Boolean @default(false)
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+}
+
+model EmployeeSalary {
+  id           Int      @id @default(autoincrement())
+  employeeId   Int
+  basicSalary  Float
+  allowance    Float
+  effectiveFrom DateTime
+  isActive     Boolean   @default(true)
+
+  employee     Employee  @relation(fields: [employeeId], references: [id])
+}
+
+model EmployeeDocument {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  documentName String
+  filePath    String
+  uploadedAt  DateTime @default(now())
+
+  employee    Employee @relation(fields: [employeeId], references: [id])
+}
+
+
+model EmployeeAttendance {
+  id         Int      @id @default(autoincrement())
+  employeeId Int
+  date       DateTime
+  checkIn    DateTime?
+  checkOut   DateTime?
+  isPresent  Boolean  @default(true)
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+}
+
+
