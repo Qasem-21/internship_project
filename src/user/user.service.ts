@@ -8,16 +8,23 @@ import * as bcrypt from 'bcrypt';
 export class UserService {
   constructor(private prisma: PrismaService) {}
   async create(createUserDto: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    return this.prisma.user.create({
-      data: {
-        ...createUserDto,
-        password: hashedPassword,
-      },
-      include: {
-        employee: true,
-      },
-    });
+    try {
+      const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+      return await this.prisma.user.create({
+        data: {
+          ...createUserDto,
+          password: hashedPassword,
+        },
+        include: {
+          employee: true,
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new Error('Email already exists');
+      }
+      throw error;
+    }
   }
 
   findAll() {

@@ -20,8 +20,14 @@ export class AuthService {
     const payload = { sub: userId, email };
     const refreshId = randomBytes(16).toString('hex');
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, { expiresIn: '15m' }),
-      this.jwtService.signAsync({ ...payload, refreshId }, { expiresIn: '7d' }),
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_SECRET,
+        expiresIn: '15m',
+      }),
+      this.jwtService.signAsync(
+        { ...payload, refreshId },
+        { secret: process.env.JWT_REFRESH_SECRET, expiresIn: '7d' },
+      ),
     ]);
     return { accessToken, refreshToken };
   }
@@ -30,9 +36,10 @@ export class AuthService {
     userId: number,
     refreshToken: string,
   ): Promise<void> {
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { refreshToken },
+      data: { refreshToken: hashedRefreshToken },
     });
   }
 
@@ -41,13 +48,35 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: {
-        email: email,
+        email,
       },
     });
 
-    if (!user || (await bcrypt.compare(password, user.password))) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('invalid email or password');
     }
+    const tokens = await this.generateToken(user.id, user.email);
+    await this.updateRefreshToken(user.id, tokens.refreshToken);
+
+    return {
+      ...tokens,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
+    };
+  }
+
+  async refreshToken(userId: number): Promise<AuthResponseDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException('user not found');
+    }
+
     const tokens = await this.generateToken(user.id, user.email);
     await this.updateRefreshToken(user.id, tokens.refreshToken);
 
