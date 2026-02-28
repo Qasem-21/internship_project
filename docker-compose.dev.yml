@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - nest-internship-network
+
+  nest-app:
+    build: 
+      context: .
+      dockerfile: dev.Dockerfile
+    container_name: nest-api_dev
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: "postgresql://internship_user:password123@postgres:5432/internship_database"
+    ports:
+      - "3004:3004"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - nest-internship-network
+
+  prisma-studio:
+    image: node:22-alpine 
+    container_name: prisma-studio-dev
+    working_dir: /app
+    command: sh -c "npm i -g prisma && prisma studio"
+    volumes: 
+      - .:/app
+    depends_on:
+      - nest
+    ports:
+      - "5555:5555" 
+
+volumes:
+  postgres_data:
+
+networks:
+  nest-internship-network:
+    driver: bridge

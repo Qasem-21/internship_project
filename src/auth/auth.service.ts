@@ -22,7 +22,7 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_SECRET,
-        expiresIn: '15m',
+        expiresIn: '30s',
       }),
       this.jwtService.signAsync(
         { ...payload, refreshId },
@@ -66,6 +66,13 @@ export class AuthService {
         role: user.role,
       },
     };
+  }
+
+  async logout(userId: number): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
   }
 
   async refreshToken(userId: number): Promise<AuthResponseDto> {
