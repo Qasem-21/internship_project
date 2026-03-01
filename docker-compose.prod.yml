@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - nest-internship-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      retries: 10
+
+  nest-app:
+    build: 
+      context: .
+      dockerfile: prod.Dockerfile
+    container_name: nest-api-prod
+    depends_on:
+      - postgres
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3004
+      DATABASE_URL: ${DATABASE_URL_NO_LOCALHOST}
+    ports:
+      - "3004:3004"
+    networks:
+      - nest-internship-network
+
+volumes:
+  postgres_prod_data:
